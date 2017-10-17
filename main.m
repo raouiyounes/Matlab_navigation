@@ -1,0 +1,62 @@
+global Map;
+clear all
+ Map = 100*rand(2,30)+10;
+
+global xrr;global yrr;global thetarr;
+Ppred = diag([5,5,(1*pi/1800)^2]);
+Pest = diag([1,1,(1*pi/1800)^2]);
+
+load gtruth.mat
+
+rectangle('Position',[0,-0,100,80],'Curvature',[0,0],'LineStyle','--')
+rectangle('Position',[-10,-10,130,100],'Curvature',[0,0],'LineStyle','--')
+hold on
+xrr= gtruth(:,1)';
+yrr= gtruth(:,2)';
+thetarr=gtruth(:,3)';
+
+x_k_k=[0 0 0]';
+xPred=x_k_k;
+xEst=x_k_k;
+x_P=[0 0 0]';
+
+%QTrue est le bruit affecté au deplacement
+
+
+for i=1:size(xrr,2)-1
+    uxrr(i)=xrr(i+1)-xrr(i);
+    uyrr(i)=yrr(i+1)-yrr(i);
+    uthetarr(i)=thetarr(i+1)-thetarr(i);
+end
+
+
+hold on         
+for i=1:size(xrr,2)-1
+    d(:,i) =tcomp1(uxrr(i),uyrr(i),thetarr(i));
+end
+
+uxx=d(1,:);
+uyy=d(2,:);  
+
+
+for step=1:size(xrr,2)-1
+    
+
+    QTrue = diag([0.01*(xrr(step+1)-xrr(step)),0.01*(yrr(step+1)-yrr(step)),0.02*(thetarr(step+1)-thetarr(step))]).^2;
+    u=[uxx(step);uyy(step);uthetarr(step)];
+    hold on
+    uNoise = sqrt(QTrue)*randn(3,1);
+    u = tcomp(u,uNoise,u(3));
+       x_P(1:3)=tcomp(x_P(1:3),u,x_P(3));
+        Ppred=A1(xEst,u)*QTrue*A1(xEst,u)'+B1(xEst,u)*Pest*B1(xEst,u)'
+    xEst(1:3)=tcomp(xEst(1:3),u,xEst(3));
+    [Pest xEst]=  ekf(xEst',step,QTrue,Map,Ppred,u);
+    xEst=[xEst(1) xEst(2) xEst(3)]';
+    save xEst.mat xEst;
+    plot(xEst(1),xEst(2),'r*')
+    
+   pause(0.1);
+end
+
+
+
